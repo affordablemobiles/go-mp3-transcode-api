@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Audio Player</title>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+<script>
+    var Sound = (function () {
+        return function Sound(src) {
+            var snd = new Audio(src);
+            snd.controls = true;
+            jQuery("#player").html('');
+            jQuery("#player").append(snd);
+            snd.play();
+            return snd;
+        }
+    }());
+
+    function upload() {
+        var data = new FormData();
+
+        jQuery.each(jQuery('#source')[0].files, function(i, file) {
+            data.set("source", file);
+        });
+
+        fetch('/api/audio/v1/transcode', {
+            method: 'POST',
+            body: data
+        }).then(response => {
+            response.blob()
+                .then(blob => {
+                    var snd = Sound(URL.createObjectURL(blob).replace(/^data\:application\/octet\-stream/, "data:audio/mpeg"));
+                }).catch(e => {
+                    console.error(e);
+                })
+        }).catch(error => {
+            console.error(error);
+        });
+
+        return false;
+    }
+</script>
+</head>
+
+<body>
+    <form id="form" enctype="multipart/form-data" onsubmit="return upload()">
+        <div class="input-group">
+            <label for="files">Select files</label>
+            <input id="source" type="file" />
+        </div>
+        <button class="submit-btn" type="submit">Upload</button>
+    </form>
+    <br />
+    <br />
+    <div id="player">&nbsp;</div>
+</body>
+
+</html>
