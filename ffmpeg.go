@@ -84,19 +84,21 @@ func transcode_audio(w io.Writer, r io.ReadCloser) {
 	defer gmf.Release(oavioCtx)
 	outputCtx.SetPb(oavioCtx)
 
+	// Audio stream from source file...
 	srcAudioStream, err := inputCtx.GetBestStream(gmf.AVMEDIA_TYPE_AUDIO)
 	if err != nil {
-		log.Printf("No audio stream found in input")
+		panic(fmt.Errorf("No audio stream found in input"))
 	} else {
 		_, outputIndex = addStream("libmp3lame", outputCtx, srcAudioStream)
 	}
 	inputCodecCtx := srcAudioStream.CodecCtx()
 
-	/// resample
+	// Output audio stream...
 	ost := assert(outputCtx.GetStream(outputIndex)).(*gmf.Stream)
 	defer gmf.Release(ost.CodecCtx())
 	defer gmf.Release(ost)
 
+	// Resampler...
 	options := []*gmf.Option{
 		{Key: "in_channel_layout", Val: inputCodecCtx.ChannelLayout()},
 		{Key: "out_channel_layout", Val: inputCodecCtx.ChannelLayout()},
@@ -114,6 +116,7 @@ func transcode_audio(w io.Writer, r io.ReadCloser) {
 		panic(fmt.Errorf("unable to create Swr Context"))
 	}
 
+	// Start writing to the output file...
 	if err := outputCtx.WriteHeader(); err != nil {
 		panic(err)
 	}
@@ -127,8 +130,6 @@ func transcode_audio(w io.Writer, r io.ReadCloser) {
 	for packet := range inputCtx.GetNewPackets() {
 		func() {
 			packets++
-
-			//ist := assert(inputCtx.GetStream(0)).(*gmf.Stream)
 
 			srcFrames, err := inputCodecCtx.Decode(packet)
 			defer packet.Free()
